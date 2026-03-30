@@ -58,17 +58,28 @@ curl -fsSL https://raw.githubusercontent.com/farhaan/llmeval/main/.claude/comman
 
 After that, type `/llmeval` inside any Claude Code session to invoke it.
 
-### Installing the Claude Code plugin manually
+### Installing the Claude Code plugin
 
-The plugin enables `/llmeval:harden` and other subcommands:
+**Option A — Plugin install (recommended):**
+
+Inside Claude Code, run:
+
+```
+/plugin marketplace add farhaan/llmeval
+/plugin install llmeval@llmeval
+```
+
+Then `/reload-plugins` to activate. All subcommands (`/llmeval:harden`, etc.) become available immediately.
+
+**Option B — Manual install:**
 
 ```bash
 git clone https://github.com/farhaan/llmeval
-claude plugins marketplace add ./llmeval --scope project
-claude plugins install llmeval@llmeval --scope project
+cp -r llmeval/.claude-plugin/plugin/commands/llmeval ~/.claude/commands/llmeval
+cp llmeval/.claude-plugin/plugin/commands/llmeval.md ~/.claude/commands/llmeval.md
 ```
 
-Then run `/reload-plugins` inside Claude Code to activate.
+Then `/reload-plugins` inside Claude Code to activate.
 
 ## API keys
 
