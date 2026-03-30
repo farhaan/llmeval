@@ -11,14 +11,17 @@ linters:
     - misspell       # common spelling mistakes in comments/strings
     - godot          # comments should end with a period
     - nilerr         # return nil after checking err != nil
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters: [godot]
+      - path: examples/
+        linters: [godot, errcheck]
 
-formatter:
-  goimports:
-    local-prefixes: github.com/farhaan/llmeval
-
-issues:
-  exclude-rules:
-    - path: _test\.go
-      linters: [godot]
-    - path: examples/
-      linters: [godot, errcheck]
+formatters:
+  enable:
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/farhaan/llmeval
