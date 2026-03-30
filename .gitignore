@@ -1,0 +1,16 @@
+# Runtime output — API caches, history, harden state
+.llmeval/
+
+# API keys
+.env
+*.env
+
+# Dev-session artifacts (autoresearch / autofix agent outputs)
+scenario/
+fix/
+
+# Go build output
+/llmeval
+
+# macOS
+.DS_Store

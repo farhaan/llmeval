@@ -1,0 +1,18 @@
+{
+  "name": "llmeval",
+  "description": "Compare LLM response quality and harden prompts against adversarial attacks. Nuclear-strict judging. Multilingual probe generation.",
+  "version": "0.1.0",
+  "author": {
+    "name": "farhaan",
+    "url": "https://github.com/farhaan/llmeval"
+  },
+  "repository": "https://github.com/farhaan/llmeval",
+  "license": "MIT",
+  "keywords": [
+    "llm",
+    "eval",
+    "prompt-hardening",
+    "red-team",
+    "adversarial"
+  ]
+}

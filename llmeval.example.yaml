@@ -1,0 +1,153 @@
+# yaml-language-server: $schema=./llmeval.schema.json
+# llmeval.example.yaml — copy to llmeval.yaml and customise
+#
+# Add .llmeval/ to your .gitignore — it contains API response cache, judge
+# cache, and run history (can be large and contains raw model outputs).
+#
+# All built-in providers are pre-wired by default — you only need this file to:
+#   - Define named tasks (reusable evaluation scenarios)
+#   - Add custom endpoints (Ollama, LM Studio, etc.)
+#   - Override base URLs, timeouts, or API key env var names
+#   - Disable built-in providers you don't use
+#   - Define model aliases
+#   - Tune generation defaults
+#   - Configure prompt hardening
+
+# ── Tasks ─────────────────────────────────────────────────────────────────────
+# Named evaluation scenarios. Run with: /llmeval --task-id <name>
+# CLI flags always override task-level defaults.
+#
+tasks:
+  explain-recursion:
+    description: "Explain recursion to a 10-year-old"
+    system: "You are a patient teacher who explains complex concepts using simple analogies."
+    params: [clarity, accuracy, creativity]
+    models:
+      - groq/llama-3.3-70b-versatile
+      - openai/gpt-4o
+      - anthropic/claude-haiku-4-5
+    dataset_size: 5
+    mode: pointwise
+
+  go-code-review:
+    description: "Review the following Go code snippet for correctness and idiomatic style"
+    system: "You are a senior Go engineer doing a thorough but concise code review."
+    params: [code_quality, accuracy, depth]
+    models:
+      - groq/llama-3.3-70b-versatile
+      - openai/gpt-4o
+    dataset_size: 3
+    concurrency: 10   # this task hits only 2 models — allow more parallelism
+    mode: pairwise
+
+  write-haiku:
+    description: "Write a haiku about a given programming concept"
+    # no system prompt — models respond bare
+    params: [creativity, imagery, syllables]
+    models:
+      - groq/llama-3.3-70b-versatile
+      - openai/gpt-4o
+      - anthropic/claude-haiku-4-5
+    dataset_size: 5
+    mode: pairwise
+
+# ── Providers ─────────────────────────────────────────────────────────────────
+# type: openai_compat  → any OpenAI-compatible /v1/chat/completions endpoint
+# type: anthropic      → native Anthropic Messages API (different wire format)
+#
+# API key convention: the env var is derived automatically from the provider name:
+#   groq       → GROQ_API_KEY
+#   openai     → OPENAI_API_KEY
+#   anthropic  → ANTHROPIC_API_KEY
+#   myservice  → MYSERVICE_API_KEY   (any new provider follows the same rule)
+#
+# Keys are loaded from (highest priority first):
+#   1. Shell environment
+#   2. .env in project root
+#   3. .llmeval/.env
+#
+# Built-in providers are pre-wired — no config needed unless you want to override.
+# Run 'llmeval providers' to see all configured providers and their key status.
+
+# Example: add a local Ollama instance (no API key needed)
+# providers:
+#   ollama:
+#     type: openai_compat
+#     base_url: http://localhost:11434/v1
+#     timeout_secs: 300   # local CPU inference can be slow — increase as needed
+
+# Example: override the timeout for a built-in provider
+# providers:
+#   groq:
+#     type: openai_compat
+#     base_url: https://api.groq.com/openai/v1
+#     timeout_secs: 30   # Groq is fast; fail quickly on hangs
+
+# Example: disable a built-in provider you don't use
+# Removes it from registry and from 'llmeval providers' output entirely.
+# providers:
+#   deepinfra:
+#     enabled: false
+#   openrouter:
+#     enabled: false
+
+# Example: two OpenRouter tiers sharing the same key
+# providers:
+#   openrouter-fast:
+#     type: openai_compat
+#     base_url: https://openrouter.ai/api/v1
+#     api_key_env: OPENROUTER_API_KEY
+#   openrouter-quality:
+#     type: openai_compat
+#     base_url: https://openrouter.ai/api/v1
+#     api_key_env: OPENROUTER_API_KEY   # both share one key
+
+# Example: custom key name (key stored under a non-standard env var)
+# providers:
+#   groq:
+#     type: openai_compat
+#     base_url: https://api.groq.com/openai/v1
+#     api_key_env: MY_GROQ_KEY   # reads $MY_GROQ_KEY instead of $GROQ_API_KEY
+
+# ── Model aliases ──────────────────────────────────────────────────────────────
+# Optional. Without this, use "<provider>/<exact-model-name>" in --models.
+# Aliases let you use shorter names and change the underlying model in one place.
+#
+# models:
+#   - id: groq/llama-3.3-70b
+#     provider: groq
+#     model_name: llama-3.3-70b-versatile
+#
+#   - id: local/llama3.2
+#     provider: ollama
+#     model_name: llama3.2
+
+# ── Prompt hardening ──────────────────────────────────────────────────────────
+# Run with: llmeval harden --all  or  llmeval harden --prompt path/to/prompt.md
+#
+harden:
+  manifest: priv/prompts/manifest.yaml      # prompt manifest with risk_profile + fixtures
+  target: groq/openai/gpt-oss-120b          # model to attack
+  judge_model: anthropic/claude-sonnet-4-6  # informational — recorded in audit log
+  probes: 15                                # adversarial probes per iteration
+  concurrency: 5                            # parallel probe API calls
+  max_iterations: 0                         # 0 = unlimited — run until stop condition met
+  confirmation_runs: 1                      # re-runs when findings==0 to confirm clean
+                                            # set to 0 to skip confirmation (faster, less reliable)
+  probe_runs: 1                             # runs per probe; finding recorded if triggered in ≥1 run
+                                            # set > 1 to reduce false negatives from stochastic outputs
+  skip_golden: false                        # true = skip golden-query regression after each patch
+  cache: false                              # true = skip re-run if prompt file hash unchanged
+  until:
+    findings_eq: 0                          # stop when zero findings remain
+  run_dir: .llmeval/harden                  # checkpoint directories (one subdir per prompt stem)
+  audit_log: .llmeval/harden_audit.jsonl    # append-only run log
+
+# ── Global defaults ────────────────────────────────────────────────────────────
+# Overridden by task-level settings, which are overridden by CLI flags.
+dataset_size: 5
+concurrency: 5
+
+model_config:
+  max_tokens: 1024
+  temperature: 0.7

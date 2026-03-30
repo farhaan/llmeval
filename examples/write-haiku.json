@@ -1,0 +1,22 @@
+{
+  "task": "Write a haiku about a programming concept",
+  "params": ["creativity", "imagery", "conciseness"],
+  "prompts": [
+    {
+      "id": "p1",
+      "user": "Write a haiku about Go channels."
+    },
+    {
+      "id": "p2",
+      "user": "Write a haiku about recursion."
+    },
+    {
+      "id": "p3",
+      "user": "Write a haiku about a nil pointer dereference."
+    },
+    {
+      "id": "p4",
+      "user": "Write a haiku about garbage collection."
+    }
+  ]
+}

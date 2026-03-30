@@ -1,0 +1,256 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "llmeval configuration",
+  "description": "Configuration for llmeval — LLM response quality evaluator",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "dataset_size": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 5,
+      "description": "Default number of prompts to generate per evaluation run. Overridden by task-level dataset_size or --dataset-size flag."
+    },
+    "concurrency": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 5,
+      "description": "Max parallel API calls. Overridden by task-level concurrency or --concurrency flag."
+    },
+    "model_config": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Default generation parameters sent to every provider.",
+      "properties": {
+        "max_tokens": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1024,
+          "description": "Maximum tokens in the model response."
+        },
+        "temperature": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2,
+          "default": 0.7,
+          "description": "Sampling temperature. 0 = deterministic, higher = more creative."
+        }
+      }
+    },
+    "providers": {
+      "type": "object",
+      "description": "Named provider instances. Built-in providers (groq, openai, anthropic, openrouter, deepinfra) are pre-wired — only add entries here to override or extend.",
+      "additionalProperties": {
+        "$ref": "#/definitions/provider"
+      }
+    },
+    "models": {
+      "type": "array",
+      "description": "Optional model aliases. Without this, use '<provider>/<model-name>' directly in --models or task configs.",
+      "items": {
+        "$ref": "#/definitions/model_mapping"
+      }
+    },
+    "tasks": {
+      "type": "object",
+      "description": "Named evaluation scenarios. Run with: /llmeval --task-id <name>",
+      "additionalProperties": {
+        "$ref": "#/definitions/task"
+      }
+    },
+    "harden": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Prompt hardening pipeline config. Run with: llmeval harden --all",
+      "properties": {
+        "manifest": {
+          "type": "string",
+          "description": "Path to prompt manifest YAML."
+        },
+        "target": {
+          "type": "string",
+          "description": "Model to attack (e.g. groq/openai/gpt-oss-120b)."
+        },
+        "judge_model": {
+          "type": "string",
+          "description": "Informational — the Claude Code session acts as judge. Set to the model slug you want recorded in audit logs."
+        },
+        "probes": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 15,
+          "description": "Adversarial probes generated per iteration."
+        },
+        "concurrency": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 5,
+          "description": "Max parallel probe API calls."
+        },
+        "max_iterations": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "Maximum harden iterations per prompt. 0 = unlimited (run until stop condition met)."
+        },
+        "confirmation_runs": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 1,
+          "description": "Re-runs of the full probe set when findings == 0, to confirm the prompt is genuinely clean. 0 = skip confirmation (faster but less reliable)."
+        },
+        "probe_runs": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1,
+          "description": "How many times to run each probe. A finding is recorded if triggered in at least one run. Values > 1 reduce false negatives from stochastic model outputs."
+        },
+        "skip_golden": {
+          "type": "boolean",
+          "default": false,
+          "description": "Skip golden-query validation after each patch. Use for stable prompts where regression testing is not needed. Can be overridden per-prompt in the manifest."
+        },
+        "cache": {
+          "type": "boolean",
+          "default": false,
+          "description": "Skip the harden run if the prompt file hash is unchanged from the last completed run. Re-runs automatically when the prompt changes. Can be overridden per-prompt in the manifest."
+        },
+        "until": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Stop conditions for the harden loop.",
+          "properties": {
+            "findings_eq": {
+              "type": "integer",
+              "description": "Stop when the findings count equals this value. Typically 0 (stop when clean)."
+            }
+          }
+        },
+        "run_dir": {
+          "type": "string",
+          "default": ".llmeval/harden",
+          "description": "Directory for per-prompt checkpoint state (one subdirectory per prompt stem)."
+        },
+        "audit_log": {
+          "type": "string",
+          "default": ".llmeval/harden_audit.jsonl",
+          "description": "Append-only JSONL log of completed harden runs — one line per prompt, includes iteration count, patch count, final status, and probe language."
+        }
+      }
+    }
+  },
+  "definitions": {
+    "provider": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["openai_compat", "anthropic"],
+          "description": "'openai_compat' covers Groq, OpenRouter, DeepInfra, Ollama, LM Studio, and any /v1/chat/completions endpoint. 'anthropic' uses the native Messages API."
+        },
+        "base_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Base URL for the provider API (required for openai_compat; not used for anthropic). Example: https://api.groq.com/openai/v1"
+        },
+        "api_key_env": {
+          "type": "string",
+          "description": "Override the env var name for the API key. Defaults to UPPER(provider_name)_API_KEY (e.g. 'groq' → GROQ_API_KEY). Useful when sharing a key across multiple provider entries or for non-standard key names."
+        },
+        "timeout_secs": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 120,
+          "description": "HTTP client timeout in seconds for this provider. Increase for slow local endpoints (e.g. Ollama on CPU). Default: 120s."
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Set to false to remove a built-in provider entirely. Prevents accidental API calls and hides it from 'llmeval providers' output."
+        }
+      }
+    },
+    "model_mapping": {
+      "type": "object",
+      "required": ["id", "provider", "model_name"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Model ID used in --models and task configs. Convention: '<provider>/<alias>'. Example: groq/llama-3.3-70b"
+        },
+        "provider": {
+          "type": "string",
+          "description": "Must match a key under providers: (built-in or custom)."
+        },
+        "model_name": {
+          "type": "string",
+          "description": "Exact model name sent to the provider API. Example: llama-3.3-70b-versatile"
+        }
+      }
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "Task prompt passed to Claude for dataset generation. Equivalent to /llmeval --task \"...\""
+        },
+        "system": {
+          "type": "string",
+          "description": "Default system prompt injected into every generated prompt. Individual hand-crafted prompts can override this."
+        },
+        "params": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "accuracy",
+              "clarity",
+              "creativity",
+              "depth",
+              "conciseness",
+              "tone",
+              "actionability",
+              "code_quality",
+              "specificity",
+              "safety",
+              "format_adherence",
+              "factual_precision",
+              "brevity",
+              "imagery",
+              "syllables"
+            ]
+          },
+          "minItems": 1,
+          "description": "Scoring dimensions for pointwise mode. Omit to let Claude auto-select based on the task description."
+        },
+        "models": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 2,
+          "description": "Models to compare. Use '<provider>/<model-name>' format or aliases defined under models:. Overridden by --models flag."
+        },
+        "dataset_size": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of prompts to generate for this task. Overrides global dataset_size."
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["pointwise", "pairwise"],
+          "default": "pointwise",
+          "description": "'pointwise': each response scored 1–5 per param. 'pairwise': head-to-head matchups with Elo ratings."
+        },
+        "concurrency": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Max parallel API calls for this task. Overrides global concurrency."
+        }
+      }
+    }
+  }
+}

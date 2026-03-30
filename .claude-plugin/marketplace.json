@@ -1,0 +1,24 @@
+{
+  "name": "llmeval",
+  "owner": {
+    "name": "farhaan",
+    "url": "https://github.com/farhaan/llmeval"
+  },
+  "metadata": {
+    "description": "LLM evaluation and adversarial prompt hardening for Claude Code.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "llmeval",
+      "description": "Compare LLM response quality and harden prompts against adversarial attacks. Nuclear-strict judging. Multilingual probe generation. /llmeval for quality comparison, /llmeval:harden for adversarial red-teaming.",
+      "author": {
+        "name": "farhaan",
+        "url": "https://github.com/farhaan/llmeval"
+      },
+      "source": "./.claude-plugin/plugin",
+      "category": "productivity",
+      "tags": ["llm", "eval", "prompt-hardening", "red-team", "adversarial"]
+    }
+  ]
+}

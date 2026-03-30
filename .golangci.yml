@@ -1,0 +1,24 @@
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - errcheck       # unchecked error returns
+    - govet          # go vet checks
+    - staticcheck    # comprehensive static analysis
+    - unused         # unused code
+    - ineffassign    # assignments with no effect
+    - misspell       # common spelling mistakes in comments/strings
+    - godot          # comments should end with a period
+    - nilerr         # return nil after checking err != nil
+
+formatter:
+  goimports:
+    local-prefixes: github.com/farhaan/llmeval
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters: [godot]
+    - path: examples/
+      linters: [godot, errcheck]

@@ -1,0 +1,20 @@
+{
+  "task": "Explain recursion to a 10-year-old",
+  "params": ["clarity", "accuracy", "creativity"],
+  "prompts": [
+    {
+      "id": "p1",
+      "system": "You are a patient teacher who uses everyday analogies.",
+      "user": "What is recursion? Explain it like I'm 10 years old."
+    },
+    {
+      "id": "p2",
+      "user": "Can you show me recursion using something from real life, not computers?"
+    },
+    {
+      "id": "p3",
+      "system": "Keep your answer under 100 words.",
+      "user": "Explain recursion as simply as possible."
+    }
+  ]
+}
